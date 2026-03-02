@@ -28,6 +28,7 @@ async function fetchActiveWeek() {
     const { data, error } = await db
         .from('weeks')
         .select('*')
+        .eq('is_active', true)
         .order('week_to', { ascending: false })
         .limit(1)
         .single();

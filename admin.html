@@ -5,6 +5,7 @@
   <title>Leaderboard Admin</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
 
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -24,39 +25,29 @@
     @media(min-width:768px) { .card { padding: 20px; } }
     .muted { color:#9fb0c8; }
 
-    input, select {
-      background: #0f1b2e;
-      border: 1px solid #1f2d40;
-      border-radius: 8px;
-      padding: 10px 12px;
-      color: #e6eef8;
-      width: 100%;
-      font-size: 14px;
+    /* Bootstrap dark theme overrides */
+    .form-control, .form-select {
+      background-color: #0f1b2e !important;
+      border: 1px solid #1f2d40 !important;
+      color: #e6eef8 !important;
+      font-size: 15px;
     }
-    input:focus, select:focus {
-      outline: none;
-      border-color: #7ec7ff;
-      box-shadow: 0 0 0 2px rgba(126,199,255,0.15);
+    .form-control:focus, .form-select:focus {
+      border-color: #7ec7ff !important;
+      box-shadow: 0 0 0 0.2rem rgba(126,199,255,0.2) !important;
+      background-color: #0f1b2e !important;
+      color: #e6eef8 !important;
     }
+    .form-control::placeholder { color: #5a6f8a !important; }
+    .form-label { color: #9fb0c8; font-size: 13px; margin-bottom: 4px; }
 
-    .btn {
-      padding: 10px 16px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.2s;
-      white-space: nowrap;
-      text-align: center;
-    }
-    .btn:hover { opacity: 0.85; transform: translateY(-1px); }
-    .btn:active { transform: translateY(0); }
-    .btn-primary { background: #7ec7ff; color: #071125; }
-    .btn-danger  { background: #ff6b6b; color: #071125; }
-    .btn-success { background: #7ee6c9; color: #071125; }
-    .btn-secondary { background: #1f2d40; color: #e6eef8; }
-    .btn-warning { background: #fbbf24; color: #071125; }
-    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    /* Button overrides to match theme */
+    .btn { font-weight: 600; }
+    .btn-primary { background: #7ec7ff !important; border-color: #7ec7ff !important; color: #071125 !important; }
+    .btn-danger  { background: #ff6b6b !important; border-color: #ff6b6b !important; color: #071125 !important; }
+    .btn-success { background: #7ee6c9 !important; border-color: #7ee6c9 !important; color: #071125 !important; }
+    .btn-secondary { background: #1f2d40 !important; border-color: #1f2d40 !important; color: #e6eef8 !important; }
+    .btn-warning { background: #fbbf24 !important; border-color: #fbbf24 !important; color: #071125 !important; }
 
     /* Toast */
     .toast {
@@ -115,20 +106,20 @@
 <!-- ==================== LOGIN FORM ==================== -->
 <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
   <div class="card w-full max-w-sm">
-    <h1 class="text-2xl font-extrabold mb-1">Admin Login</h1>
+    <h1 class="text-2xl font-extrabold mb-1 text-white">Admin Login</h1>
     <p class="muted text-sm mb-6">Sign in to manage the leaderboard</p>
 
     <div class="space-y-4">
       <div>
-        <label class="text-xs muted mb-1 block">Email</label>
-        <input id="login-email" type="email" placeholder="admin@example.com" />
+        <label class="form-label">Email</label>
+        <input id="login-email" type="email" class="form-control" placeholder="admin@example.com" />
       </div>
       <div>
-        <label class="text-xs muted mb-1 block">Password</label>
-        <input id="login-password" type="password" placeholder="Enter password" />
+        <label class="form-label">Password</label>
+        <input id="login-password" type="password" class="form-control" placeholder="Enter password" />
       </div>
       <div id="login-error" class="text-red-400 text-sm hidden"></div>
-      <button class="btn btn-primary w-full" id="login-btn" onclick="handleLogin()">Sign In</button>
+      <button class="btn btn-primary w-100" id="login-btn" onclick="handleLogin()">Sign In</button>
     </div>
   </div>
 </div>
@@ -154,7 +145,7 @@
 
   <!-- TABS -->
   <nav class="flex gap-2 mb-6 flex-wrap">
-    <button class="btn tab-btn active" data-tab="members">Members</button>
+    <button class="btn btn-secondary tab-btn active" data-tab="members">Members</button>
     <button class="btn btn-secondary tab-btn" data-tab="scores">Scores</button>
     <button class="btn btn-secondary tab-btn" data-tab="touchpoints">Touchpoints</button>
     <button class="btn btn-secondary tab-btn" data-tab="goals">Goals</button>
@@ -163,21 +154,21 @@
 
   <!-- ==================== TEAM MEMBERS ==================== -->
   <section id="tab-members" class="card">
-    <h2 class="text-xl font-bold mb-4">Team Members</h2>
+    <h2 class="text-xl font-bold mb-4 text-white">Team Members</h2>
 
     <div class="form-header" id="member-form-title">Add New Member</div>
     <div class="editing-indicator mb-3" id="member-editing">
       Editing member — <button class="underline" onclick="cancelEditMember()">Cancel</button>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
-      <div>
-        <label class="text-xs muted mb-1 block">Name *</label>
-        <input id="member-name" placeholder="Enter name" />
+    <div class="row g-3 mb-2">
+      <div class="col-12 col-sm-6">
+        <label class="form-label">Name *</label>
+        <input id="member-name" class="form-control" placeholder="Enter name" />
       </div>
-      <div>
-        <label class="text-xs muted mb-1 block">Email</label>
-        <input id="member-email" placeholder="Optional email" />
+      <div class="col-12 col-sm-6">
+        <label class="form-label">Email</label>
+        <input id="member-email" class="form-control" placeholder="Optional email" />
       </div>
     </div>
     <input type="hidden" id="member-edit-id" value="" />
@@ -187,7 +178,7 @@
     </div>
 
     <div class="table-wrap">
-      <table class="w-full text-left">
+      <table class="table table-dark table-borderless align-middle">
         <thead>
           <tr class="text-slate-400 text-xs uppercase tracking-wide border-b border-slate-700">
             <th class="py-2">ID</th>
@@ -203,29 +194,29 @@
 
   <!-- ==================== WEEKLY SCORES ==================== -->
   <section id="tab-scores" class="card hidden">
-    <h2 class="text-xl font-bold mb-4">Weekly Scores</h2>
+    <h2 class="text-xl font-bold mb-4 text-white">Weekly Scores</h2>
 
     <div class="form-header" id="score-form-title">Add / Update Score</div>
     <div class="editing-indicator mb-3" id="score-editing">
       Editing score — <button class="underline" onclick="cancelEditScore()">Cancel</button>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
-      <div>
-        <label class="text-xs muted mb-1 block">Week *</label>
-        <select id="score-week"></select>
+    <div class="row g-3 mb-2">
+      <div class="col-12 col-sm-6">
+        <label class="form-label">Week *</label>
+        <select id="score-week" class="form-select"></select>
       </div>
-      <div>
-        <label class="text-xs muted mb-1 block">Member *</label>
-        <select id="score-member"></select>
+      <div class="col-12 col-sm-6">
+        <label class="form-label">Member *</label>
+        <select id="score-member" class="form-select"></select>
       </div>
-      <div>
-        <label class="text-xs muted mb-1 block">Scripts Created</label>
-        <input id="score-created" type="number" min="0" placeholder="0" />
+      <div class="col-12 col-sm-6">
+        <label class="form-label">Scripts Created</label>
+        <input id="score-created" type="number" min="0" class="form-control" placeholder="0" />
       </div>
-      <div>
-        <label class="text-xs muted mb-1 block">Scripts Approved</label>
-        <input id="score-approved" type="number" min="0" placeholder="0" />
+      <div class="col-12 col-sm-6">
+        <label class="form-label">Scripts Approved</label>
+        <input id="score-approved" type="number" min="0" class="form-control" placeholder="0" />
       </div>
     </div>
     <input type="hidden" id="score-edit-id" value="" />
@@ -235,7 +226,7 @@
     </div>
 
     <div class="table-wrap">
-      <table class="w-full text-left">
+      <table class="table table-dark table-borderless align-middle">
         <thead>
           <tr class="text-slate-400 text-xs uppercase tracking-wide border-b border-slate-700">
             <th class="py-2">Week</th>
@@ -252,25 +243,25 @@
 
   <!-- ==================== TOUCHPOINTS ==================== -->
   <section id="tab-touchpoints" class="card hidden">
-    <h2 class="text-xl font-bold mb-4">Touchpoints</h2>
+    <h2 class="text-xl font-bold mb-4 text-white">Touchpoints</h2>
 
     <div class="form-header" id="tp-form-title">Add / Edit Touchpoint</div>
     <div class="editing-indicator mb-3" id="tp-editing">
       Editing touchpoint — <button class="underline" onclick="cancelEditTouchpoint()">Cancel</button>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2">
-      <div>
-        <label class="text-xs muted mb-1 block">Touchpoint Name *</label>
-        <input id="tp-name" placeholder="e.g. mobile" />
+    <div class="row g-3 mb-2">
+      <div class="col-12 col-sm-4">
+        <label class="form-label">Touchpoint Name *</label>
+        <input id="tp-name" class="form-control" placeholder="e.g. mobile" />
       </div>
-      <div>
-        <label class="text-xs muted mb-1 block">Assigned To</label>
-        <select id="tp-assigned"></select>
+      <div class="col-12 col-sm-4">
+        <label class="form-label">Assigned To</label>
+        <select id="tp-assigned" class="form-select"></select>
       </div>
-      <div>
-        <label class="text-xs muted mb-1 block">Finished Count</label>
-        <input id="tp-finished" type="number" min="0" placeholder="0" />
+      <div class="col-12 col-sm-4">
+        <label class="form-label">Finished Count</label>
+        <input id="tp-finished" type="number" min="0" class="form-control" placeholder="0" />
       </div>
     </div>
     <div class="flex gap-2 mb-6 mt-3">
@@ -279,7 +270,7 @@
     </div>
 
     <div class="table-wrap">
-      <table class="w-full text-left">
+      <table class="table table-dark table-borderless align-middle">
         <thead>
           <tr class="text-slate-400 text-xs uppercase tracking-wide border-b border-slate-700">
             <th class="py-2">Name</th>
@@ -295,33 +286,33 @@
 
   <!-- ==================== GOALS ==================== -->
   <section id="tab-goals" class="card hidden">
-    <h2 class="text-xl font-bold mb-4">Release Goals</h2>
+    <h2 class="text-xl font-bold mb-4 text-white">Release Goals</h2>
 
     <div class="form-header">Current Active Goal</div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-      <div>
-        <label class="text-xs muted mb-1 block">Target Created</label>
-        <input id="goal-target-created" type="number" min="0" />
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-sm-6 col-md-4">
+        <label class="form-label">Target Created</label>
+        <input id="goal-target-created" type="number" min="0" class="form-control" />
       </div>
-      <div>
-        <label class="text-xs muted mb-1 block">Target Approved</label>
-        <input id="goal-target-approved" type="number" min="0" />
+      <div class="col-12 col-sm-6 col-md-4">
+        <label class="form-label">Target Approved</label>
+        <input id="goal-target-approved" type="number" min="0" class="form-control" />
       </div>
-      <div>
-        <label class="text-xs muted mb-1 block">Current Approved</label>
-        <input id="goal-current-approved" type="number" min="0" />
+      <div class="col-12 col-sm-6 col-md-4">
+        <label class="form-label">Current Approved</label>
+        <input id="goal-current-approved" type="number" min="0" class="form-control" />
       </div>
-      <div>
-        <label class="text-xs muted mb-1 block">Total Developed</label>
-        <input id="goal-total-developed" type="number" min="0" />
+      <div class="col-12 col-sm-6 col-md-4">
+        <label class="form-label">Total Developed</label>
+        <input id="goal-total-developed" type="number" min="0" class="form-control" />
       </div>
-      <div>
-        <label class="text-xs muted mb-1 block">Deadline</label>
-        <input id="goal-deadline" type="date" />
+      <div class="col-12 col-sm-6 col-md-4">
+        <label class="form-label">Deadline</label>
+        <input id="goal-deadline" type="date" class="form-control" />
       </div>
-      <div class="flex items-end">
-        <button class="btn btn-success w-full" onclick="saveGoal()">Save Goal</button>
+      <div class="col-12 col-sm-6 col-md-4 d-flex align-items-end">
+        <button class="btn btn-success w-100" onclick="saveGoal()">Save Goal</button>
       </div>
     </div>
 
@@ -330,18 +321,18 @@
 
   <!-- ==================== WEEKS ==================== -->
   <section id="tab-weeks" class="card hidden">
-    <h2 class="text-xl font-bold mb-4">Tracking Weeks</h2>
+    <h2 class="text-xl font-bold mb-4 text-white">Tracking Weeks</h2>
 
     <div class="form-header">Add New Week</div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
-      <div>
-        <label class="text-xs muted mb-1 block">Week From</label>
-        <input id="week-from" type="date" />
+    <div class="row g-3 mb-2">
+      <div class="col-12 col-sm-6">
+        <label class="form-label">Week From</label>
+        <input id="week-from" type="date" class="form-control" />
       </div>
-      <div>
-        <label class="text-xs muted mb-1 block">Week To</label>
-        <input id="week-to" type="date" />
+      <div class="col-12 col-sm-6">
+        <label class="form-label">Week To</label>
+        <input id="week-to" type="date" class="form-control" />
       </div>
     </div>
     <div class="mt-3 mb-6">
@@ -349,12 +340,14 @@
     </div>
 
     <div class="table-wrap">
-      <table class="w-full text-left">
+      <table class="table table-dark table-borderless align-middle">
         <thead>
           <tr class="text-slate-400 text-xs uppercase tracking-wide border-b border-slate-700">
             <th class="py-2">ID</th>
             <th class="py-2">From</th>
             <th class="py-2">To</th>
+            <th class="py-2 text-center">Status</th>
+            <th class="py-2 text-right">Actions</th>
           </tr>
         </thead>
         <tbody id="weeks-body"></tbody>
@@ -542,19 +535,41 @@ async function loadWeeks() {
   weeks.forEach(w => {
     const tr = document.createElement('tr');
     tr.className = 'border-b border-slate-800';
+    const isActive = w.is_active;
     tr.innerHTML = `
       <td class="py-3 text-sm">${w.id}</td>
       <td class="py-3 text-sm">${w.week_from}</td>
       <td class="py-3 text-sm">${w.week_to}</td>
+      <td class="py-3 text-center">
+        <span class="badge ${isActive ? 'bg-success' : 'bg-secondary'}">${isActive ? 'Active' : 'Disabled'}</span>
+      </td>
+      <td class="py-3 text-right">
+        <button class="btn ${isActive ? 'btn-warning' : 'btn-success'} btn-sm" onclick="toggleWeek(${w.id}, ${isActive})">
+          ${isActive ? 'Disable' : 'Enable'}
+        </button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
 
+  // Only show active weeks in the scores dropdown
   const sel = document.getElementById('score-week');
   sel.innerHTML = '<option value="">Select week...</option>';
-  weeks.forEach(w => {
+  weeks.filter(w => w.is_active).forEach(w => {
     sel.innerHTML += `<option value="${w.id}">${w.week_from} – ${w.week_to}</option>`;
   });
+}
+
+async function toggleWeek(id, currentStatus) {
+  // If enabling this week, disable all others first
+  if (!currentStatus) {
+    await db.from('weeks').update({ is_active: false }).neq('id', id);
+  }
+
+  const { error } = await db.from('weeks').update({ is_active: !currentStatus }).eq('id', id);
+  if (error) return toast(error.message, 'error');
+  toast(currentStatus ? 'Week disabled' : 'Week enabled');
+  loadWeeks();
 }
 
 async function addWeek() {
@@ -562,12 +577,15 @@ async function addWeek() {
   const to = document.getElementById('week-to').value;
   if (!from || !to) return toast('Both dates are required', 'error');
 
-  const { error } = await db.from('weeks').insert({ week_from: from, week_to: to });
+  // Disable all existing weeks, new week becomes active
+  await db.from('weeks').update({ is_active: false }).neq('id', 0);
+
+  const { error } = await db.from('weeks').insert({ week_from: from, week_to: to, is_active: true });
   if (error) return toast(error.message, 'error');
 
   document.getElementById('week-from').value = '';
   document.getElementById('week-to').value = '';
-  toast('Week added');
+  toast('Week added & enabled');
   loadWeeks();
 }
 
@@ -678,6 +696,7 @@ async function loadTouchpoints() {
       <td class="py-3 text-right">${t.finished}</td>
       <td class="py-3 text-right">
         <button class="btn btn-warning btn-sm" onclick="editTouchpoint('${t.name}', ${t.assigned_to || 'null'}, ${t.finished})">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTouchpoint('${t.name}')">Delete</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -723,6 +742,14 @@ async function upsertTouchpoint() {
 
   cancelEditTouchpoint();
   toast('Touchpoint saved');
+  loadTouchpoints();
+}
+
+async function deleteTouchpoint(id) {
+  if (!confirm('Delete this Touchpoint entry?')) return;
+  const { error } = await db.from('touchpoints').delete().eq('name', id);
+  if (error) return toast(error.message, 'error');
+  toast('Touchpoint deleted');
   loadTouchpoints();
 }
 
