@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Automation Squad Leaderboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      background: linear-gradient(180deg,#071125 0%, #051021 100%);
+      color: #e6eef8;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    .card {
+      background: rgba(11,18,29,0.65);
+      border: 1px solid rgba(120,140,160,0.08);
+      border-radius: 14px;
+      padding: 20px;
+    }
+    .big-number { font-size: 40px; font-weight: 700; color:#7ee6c9; }
+    .big-number-blue { font-size: 40px; font-weight: 700; color:#7ec7ff; }
+    .muted { color:#9fb0c8; }
+
+    .avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background:#0f1b2e;
+      border:1px solid #1f2d40;
+      display:flex; align-items:center; justify-content:center;
+      font-size:14px; font-weight:600; color:#9fb0c8;
+    }
+
+    /* Top-3 sizes */
+    .top1-name { font-size: 2.2rem; font-weight: 800; }
+    .top2-name { font-size: 1.55rem; font-weight: 700; }
+    .top3-name { font-size: 1.35rem; font-weight: 600; }
+
+    /* #1 animation */
+    .top1-animate {
+      animation: pulse1 2.8s infinite ease-in-out;
+    }
+    @keyframes pulse1 {
+      0% { opacity: 1; }
+      50% { opacity: 0.55; }
+      100% { opacity: 1; }
+    }
+
+    /* Touchpoint names */
+    .tp-name { font-size: 1.75rem; font-weight: 800; }
+    .tp-title { font-size: 1.1rem; font-weight: 600; }
+
+    /* keep display alive */
+    #keepalive-dot {
+      position: fixed;
+      width: 3px; height: 3px;
+      top: 0; left: 0;
+      opacity: 0;
+      animation: moveDot 12s infinite linear;
+    }
+    @keyframes moveDot {
+      0% { transform: translate(0,0); }
+      25% { transform: translate(15px,4px); }
+      50% { transform: translate(30px,0); }
+      75% { transform: translate(15px,-4px); }
+      100% { transform: translate(0,0); }
+    }
+  </style>
+</head>
+
+<body>
+<div id="keepalive-dot"></div>
+
+<div class="max-w-7xl mx-auto p-8">
+
+  <header class="mb-10">
+    <h1 class="text-4xl font-extrabold">Automation Squad Leaderboard</h1>
+    <p class="muted mt-1">Live view of script creation & approvals across the team</p>
+    <p class="text-xs text-slate-400 mt-1" id="last-updated-ago">Last updated: —</p>
+  </header>
+
+  <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- LEFT -->
+    <section class="lg:col-span-2 space-y-8">
+
+      <!-- WEEKLY HALL OF FAME -->
+      <div class="card">
+        <div class="flex justify-between items-start">
+          <div>
+            <h2 class="text-2xl font-bold">Weekly Hall of Fame</h2>
+            <p class="muted">Top performers of the week</p>
+          </div>
+          <div class="muted text-sm" id="week-range"></div>
+        </div>
+
+        <div class="mt-6">
+          <div class="text-xs text-sky-300 uppercase tracking-wide mb-2">This Week · Top 3</div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            <!-- #1 -->
+            <div class="card flex items-center justify-between">
+              <div>
+                <div class="bg-white/5 px-2 py-1 rounded text-sm">
+                  #1 · <span id="week1-name" class="top1-name top1-animate">—</span>
+                </div>
+                <div class="muted text-xs mt-2">Created this week</div>
+              </div>
+              <div class="big-number-blue" id="week1-count">0</div>
+            </div>
+
+            <!-- #2 -->
+            <div class="card flex items-center justify-between">
+              <div>
+                <div class="bg-white/5 px-2 py-1 rounded text-sm">
+                  #2 · <span id="week2-name" class="top2-name">—</span>
+                </div>
+                <div class="muted text-xs mt-2">Created this week</div>
+              </div>
+              <div class="big-number-blue" id="week2-count">0</div>
+            </div>
+
+            <!-- #3 -->
+            <div class="card flex items-center justify-between">
+              <div>
+                <div class="bg-white/5 px-2 py-1 rounded text-sm">
+                  #3 · <span id="week3-name" class="top3-name">—</span>
+                </div>
+                <div class="muted text-xs mt-2">Created this week</div>
+              </div>
+              <div class="big-number-blue" id="week3-count">0</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- TOUCHPOINT AUTOMATION -->
+        <div class="mt-10">
+          <div class="text-xs text-sky-300 uppercase tracking-wide mb-2">Touchpoint Automation</div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            <!-- MOBILE -->
+            <div class="card">
+              <div class="tp-title">Mobile</div>
+              <div class="tp-name mt-1" id="mobile-name">—</div>
+
+              <div class="mt-4 flex items-end justify-between">
+                <span class="muted text-sm">Scripts finished</span>
+                <span class="big-number" id="mobile-finished">0</span>
+              </div>
+            </div>
+
+            <!-- MAGIQA -->
+            <div class="card">
+              <div class="tp-title">MagiQA</div>
+              <div class="tp-name mt-1" id="magiqa-name">—</div>
+
+              <div class="mt-4 flex items-end justify-between">
+                <span class="muted text-sm">Scripts finished</span>
+                <span class="big-number" id="magiqa-finished">0</span>
+              </div>
+            </div>
+
+            <!-- DEVELOPED TOTAL -->
+            <div class="card">
+              <div class="tp-title">Developed</div>
+              <div class="text-lg font-semibold mt-1">Total</div>
+
+              <div class="mt-4 flex items-end justify-between">
+                <span class="muted text-sm">Scripts developed</span>
+                <span class="big-number" id="developed-total">0</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SQUAD BREAKDOWN -->
+      <div class="card">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h2 class="text-xl font-bold">Squad Breakdown</h2>
+            <p class="muted text-sm">Each member’s contribution</p>
+          </div>
+          <div class="muted text-sm" id="week-range-2"></div>
+        </div>
+
+        <table class="w-full text-left">
+          <thead>
+            <tr class="text-slate-400 text-xs uppercase tracking-wide border-b border-slate-700">
+              <th class="py-2">Member</th>
+              <th class="py-2 text-right">This Week Created</th>
+            </tr>
+          </thead>
+          <tbody id="breakdown-body"></tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <!-- RIGHT -->
+    <aside class="space-y-6">
+
+      <!-- RELEASE TARGET -->
+      <div>
+        <div class="text-xs text-cyan-300 font-medium uppercase tracking-wider">Release Target</div>
+        <div class="mt-2 text-sm">Scripts Created: <span id="rt-created">0 / 0</span></div>
+        <div class="mt-1 text-sm">Scripts Approved: <span id="rt-approved">0 / 0</span></div>
+        <div class="muted text-xs mt-2">Target by <span id="rt-deadline">—</span></div>
+      </div>
+
+      <!-- OVERALL PROGRESS -->
+      <div class="card">
+        <h3 class="text-lg font-semibold">Overall Progress • Live</h3>
+        <p class="muted text-sm mt-1">Tracking script creation & approvals</p>
+
+        <!-- CREATED -->
+        <div class="mt-4 border rounded-lg p-3 bg-gradient-to-r from-sky-800/30 to-cyan-800/10">
+          <div class="muted text-xs uppercase tracking-wide">Created</div>
+          <div class="flex items-baseline justify-between mt-1">
+            <div class="text-lg font-semibold" id="created-numbers">0 / 0</div>
+            <div class="text-2xl font-bold text-sky-300" id="created-percent">0%</div>
+          </div>
+
+          <div class="mt-3 h-3 bg-slate-800 rounded-full overflow-hidden">
+            <div id="created-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#61dafb,#7ee6c9);"></div>
+          </div>
+
+          <div class="muted text-xs mt-2" id="created-more"></div>
+        </div>
+
+        <!-- APPROVED -->
+        <div class="mt-4 border rounded-lg p-3 bg-gradient-to-r from-emerald-800/30 to-green-800/10">
+          <div class="muted text-xs uppercase tracking-wide">Approved (Overall)</div>
+          <div class="flex items-baseline justify-between mt-1">
+            <div class="text-lg font-semibold" id="approved-numbers">0 / 0</div>
+            <div class="text-2xl font-bold text-emerald-300" id="approved-percent">0%</div>
+          </div>
+
+          <div class="mt-3 h-3 bg-slate-800 rounded-full overflow-hidden">
+            <div id="approved-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#7ee6c9,#2ec4b6);"></div>
+          </div>
+
+          <div class="muted text-xs mt-2" id="approved-more"></div>
+        </div>
+
+      </div>
+
+    </aside>
+  </main>
+
+</div>
+
+<script src="./script.js"></script>
+<script>
+async function loadData() {
+  try {
+    // Fetch all data in parallel
+    const [week, touchpoints, goal] = await Promise.all([
+      fetchActiveWeek(),
+      fetchTouchpoints(),
+      fetchActiveGoal()
+    ]);
+
+    // Fetch weekly scripts for the active week
+    const weeklyScripts = week ? await fetchWeeklyScripts(week.id) : [];
+
+    /* TIME AGO */
+    if (goal?.updated_at) {
+      el('last-updated-ago').textContent = "Last updated: " + timeAgo(goal.updated_at);
+    }
+
+    /* WEEK RANGE */
+    if (week) {
+      const txt = `Week: ${week.week_from || '—'} – ${week.week_to || '—'}`;
+      el('week-range').textContent = txt;
+      el('week-range-2').textContent = txt;
+    }
+
+    // Build sorted team list from weekly_scripts join
+    const sorted = weeklyScripts.map(ws => ({
+      name: ws.team_members?.name || '—',
+      todayCreated: n(ws.scripts_created)
+    })).sort((a, b) => b.todayCreated - a.todayCreated);
+
+    /* TOP 3 */
+    el('week1-name').textContent = sorted[0]?.name || '—';
+    el('week1-count').textContent = n(sorted[0]?.todayCreated);
+
+    el('week2-name').textContent = sorted[1]?.name || '—';
+    el('week2-count').textContent = n(sorted[1]?.todayCreated);
+
+    el('week3-name').textContent = sorted[2]?.name || '—';
+    el('week3-count').textContent = n(sorted[2]?.todayCreated);
+
+    /* TOUCHPOINTS */
+    const mobile = touchpoints.find(t => t.name === 'mobile') || {};
+    const magiqa = touchpoints.find(t => t.name === 'magiqa') || {};
+    const developed = n(goal?.total_developed);
+
+    el('mobile-name').textContent = mobile.team_members?.name || '—';
+    el('mobile-finished').textContent = n(mobile.finished);
+
+    el('magiqa-name').textContent = magiqa.team_members?.name || '—';
+    el('magiqa-finished').textContent = n(magiqa.finished);
+
+    const totalDev = developed + n(mobile.finished) + n(magiqa.finished);
+    el('developed-total').textContent = totalDev;
+
+    /* BREAKDOWN TABLE */
+    const tbody = el('breakdown-body');
+    tbody.innerHTML = "";
+
+    sorted.forEach(m => {
+      const tr = document.createElement('tr');
+      tr.className = "border-b border-slate-800";
+      tr.innerHTML = `
+        <td class="py-3 flex items-center gap-3">
+          <div class="avatar">${(m.name || 'N/A').slice(0,2).toUpperCase()}</div>
+          <span class="text-sm font-medium">${m.name || '—'}</span>
+        </td>
+        <td class="py-3 text-right font-semibold">${n(m.todayCreated)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    /* RELEASE TARGET */
+    const targetCreated = n(goal?.target_created);
+    const targetApproved = n(goal?.target_approved);
+    const totalCreated = developed;
+
+    el('rt-created').textContent = `${totalCreated} / ${targetCreated}`;
+    el('rt-approved').textContent = `${n(goal?.current_approved)} / ${targetApproved}`;
+    el('rt-deadline').textContent = goal?.deadline || '—';
+
+    /* OVERALL PROGRESS */
+    el('created-numbers').textContent = `${totalCreated} / ${targetCreated}`;
+    const createdPct = targetCreated ? Math.round(totalCreated / targetCreated * 100) : 0;
+    el('created-percent').textContent = createdPct + "%";
+    el('created-bar').style.width = Math.min(createdPct, 100) + "%";
+    el('created-more').textContent =
+      Math.max(0, targetCreated - totalCreated) + " more scripts needed to hit created target.";
+
+    const approvedOverall = n(goal?.current_approved);
+    el('approved-numbers').textContent = `${approvedOverall} / ${targetApproved}`;
+    const approvedPct = targetApproved ? Math.round(approvedOverall / targetApproved * 100) : 0;
+    el('approved-percent').textContent = approvedPct + "%";
+    el('approved-bar').style.width = Math.min(approvedPct, 100) + "%";
+    el('approved-more').textContent =
+      Math.max(0, targetApproved - approvedOverall) + " more scripts needed to hit approval target.";
+
+  } catch (err) {
+    console.error('Failed to load leaderboard data:', err);
+  }
+}
+
+loadData();
+setInterval(loadData, 30000);
+</script>
+
+</body>
+</html>

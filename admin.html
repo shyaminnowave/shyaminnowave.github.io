@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Leaderboard Admin</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      background: linear-gradient(180deg,#071125 0%, #051021 100%);
+      color: #e6eef8;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      min-height: 100vh;
+    }
+    .card {
+      background: rgba(11,18,29,0.65);
+      border: 1px solid rgba(120,140,160,0.08);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    @media(min-width:768px) { .card { padding: 20px; } }
+    .muted { color:#9fb0c8; }
+
+    input, select {
+      background: #0f1b2e;
+      border: 1px solid #1f2d40;
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #e6eef8;
+      width: 100%;
+      font-size: 14px;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #7ec7ff;
+      box-shadow: 0 0 0 2px rgba(126,199,255,0.15);
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      text-align: center;
+    }
+    .btn:hover { opacity: 0.85; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary { background: #7ec7ff; color: #071125; }
+    .btn-danger  { background: #ff6b6b; color: #071125; }
+    .btn-success { background: #7ee6c9; color: #071125; }
+    .btn-secondary { background: #1f2d40; color: #e6eef8; }
+    .btn-warning { background: #fbbf24; color: #071125; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      padding: 12px 24px; border-radius: 10px;
+      font-weight: 600; z-index: 999; font-size: 14px;
+      animation: slideUp 0.3s;
+    }
+    .toast-success { background: #7ee6c9; color: #071125; }
+    .toast-error   { background: #ff6b6b; color: #071125; }
+    @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+    /* Responsive table wrapper */
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .table-wrap table { min-width: 480px; }
+
+    /* Form section header */
+    .form-header {
+      font-size: 13px;
+      font-weight: 600;
+      color: #7ec7ff;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(120,140,160,0.1);
+    }
+
+    /* Edit indicator */
+    .editing-indicator {
+      background: rgba(251,191,36,0.15);
+      border: 1px solid rgba(251,191,36,0.3);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: #fbbf24;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .editing-indicator.active { display: flex; }
+
+    /* Tab active highlight */
+    .tab-btn.active {
+      background: #7ec7ff !important;
+      color: #071125 !important;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ==================== LOGIN FORM ==================== -->
+<div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+  <div class="card w-full max-w-sm">
+    <h1 class="text-2xl font-extrabold mb-1">Admin Login</h1>
+    <p class="muted text-sm mb-6">Sign in to manage the leaderboard</p>
+
+    <div class="space-y-4">
+      <div>
+        <label class="text-xs muted mb-1 block">Email</label>
+        <input id="login-email" type="email" placeholder="admin@example.com" />
+      </div>
+      <div>
+        <label class="text-xs muted mb-1 block">Password</label>
+        <input id="login-password" type="password" placeholder="Enter password" />
+      </div>
+      <div id="login-error" class="text-red-400 text-sm hidden"></div>
+      <button class="btn btn-primary w-full" id="login-btn" onclick="handleLogin()">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ADMIN CONTENT (hidden until login) ==================== -->
+<div id="admin-content" class="hidden">
+<div class="max-w-5xl mx-auto px-4 py-6 sm:px-6 md:px-8 md:py-8">
+
+  <!-- HEADER -->
+  <header class="mb-6 md:mb-8">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-extrabold">Leaderboard Admin</h1>
+        <p class="muted text-sm mt-1">Manage team members, scores, touchpoints & goals</p>
+        <p class="text-xs text-slate-400 mt-1">Logged in as: <span id="user-email" class="text-sky-300"></span></p>
+      </div>
+      <div class="flex gap-2">
+        <a href="./index.html" class="btn btn-primary btn-sm">Dashboard</a>
+        <button class="btn btn-danger btn-sm" onclick="handleLogout()">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- TABS -->
+  <nav class="flex gap-2 mb-6 flex-wrap">
+    <button class="btn tab-btn active" data-tab="members">Members</button>
+    <button class="btn btn-secondary tab-btn" data-tab="scores">Scores</button>
+    <button class="btn btn-secondary tab-btn" data-tab="touchpoints">Touchpoints</button>
+    <button class="btn btn-secondary tab-btn" data-tab="goals">Goals</button>
+    <button class="btn btn-secondary tab-btn" data-tab="weeks">Weeks</button>
+  </nav>
+
+  <!-- ==================== TEAM MEMBERS ==================== -->
+  <section id="tab-members" class="card">
+    <h2 class="text-xl font-bold mb-4">Team Members</h2>
+
+    <div class="form-header" id="member-form-title">Add New Member</div>
+    <div class="editing-indicator mb-3" id="member-editing">
+      Editing member — <button class="underline" onclick="cancelEditMember()">Cancel</button>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+      <div>
+        <label class="text-xs muted mb-1 block">Name *</label>
+        <input id="member-name" placeholder="Enter name" />
+      </div>
+      <div>
+        <label class="text-xs muted mb-1 block">Email</label>
+        <input id="member-email" placeholder="Optional email" />
+      </div>
+    </div>
+    <input type="hidden" id="member-edit-id" value="" />
+    <div class="flex gap-2 mb-6 mt-3">
+      <button class="btn btn-success" id="member-save-btn" onclick="saveMember()">Add Member</button>
+      <button class="btn btn-secondary hidden" id="member-cancel-btn" onclick="cancelEditMember()">Cancel</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="text-slate-400 text-xs uppercase tracking-wide border-b border-slate-700">
+            <th class="py-2">ID</th>
+            <th class="py-2">Name</th>
+            <th class="py-2 hidden sm:table-cell">Email</th>
+            <th class="py-2 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="members-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==================== WEEKLY SCORES ==================== -->
+  <section id="tab-scores" class="card hidden">
+    <h2 class="text-xl font-bold mb-4">Weekly Scores</h2>
+
+    <div class="form-header" id="score-form-title">Add / Update Score</div>
+    <div class="editing-indicator mb-3" id="score-editing">
+      Editing score — <button class="underline" onclick="cancelEditScore()">Cancel</button>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+      <div>
+        <label class="text-xs muted mb-1 block">Week *</label>
+        <select id="score-week"></select>
+      </div>
+      <div>
+        <label class="text-xs muted mb-1 block">Member *</label>
+        <select id="score-member"></select>
+      </div>
+      <div>
+        <label class="text-xs muted mb-1 block">Scripts Created</label>
+        <input id="score-created" type="number" min="0" placeholder="0" />
+      </div>
+      <div>
+        <label class="text-xs muted mb-1 block">Scripts Approved</label>
+        <input id="score-approved" type="number" min="0" placeholder="0" />
+      </div>
+    </div>
+    <input type="hidden" id="score-edit-id" value="" />
+    <div class="flex gap-2 mb-6 mt-3">
+      <button class="btn btn-success" id="score-save-btn" onclick="upsertScore()">Save Score</button>
+      <button class="btn btn-secondary hidden" id="score-cancel-btn" onclick="cancelEditScore()">Cancel</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="text-slate-400 text-xs uppercase tracking-wide border-b border-slate-700">
+            <th class="py-2">Week</th>
+            <th class="py-2">Member</th>
+            <th class="py-2 text-right">Created</th>
+            <th class="py-2 text-right">Approved</th>
+            <th class="py-2 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="scores-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==================== TOUCHPOINTS ==================== -->
+  <section id="tab-touchpoints" class="card hidden">
+    <h2 class="text-xl font-bold mb-4">Touchpoints</h2>
+
+    <div class="form-header" id="tp-form-title">Add / Edit Touchpoint</div>
+    <div class="editing-indicator mb-3" id="tp-editing">
+      Editing touchpoint — <button class="underline" onclick="cancelEditTouchpoint()">Cancel</button>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2">
+      <div>
+        <label class="text-xs muted mb-1 block">Touchpoint Name *</label>
+        <input id="tp-name" placeholder="e.g. mobile" />
+      </div>
+      <div>
+        <label class="text-xs muted mb-1 block">Assigned To</label>
+        <select id="tp-assigned"></select>
+      </div>
+      <div>
+        <label class="text-xs muted mb-1 block">Finished Count</label>
+        <input id="tp-finished" type="number" min="0" placeholder="0" />
+      </div>
+    </div>
+    <div class="flex gap-2 mb-6 mt-3">
+      <button class="btn btn-success" id="tp-save-btn" onclick="upsertTouchpoint()">Save Touchpoint</button>
+      <button class="btn btn-secondary hidden" id="tp-cancel-btn" onclick="cancelEditTouchpoint()">Cancel</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="text-slate-400 text-xs uppercase tracking-wide border-b border-slate-700">
+            <th class="py-2">Name</th>
+            <th class="py-2">Assigned To</th>
+            <th class="py-2 text-right">Finished</th>
+            <th class="py-2 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="touchpoints-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==================== GOALS ==================== -->
+  <section id="tab-goals" class="card hidden">
+    <h2 class="text-xl font-bold mb-4">Release Goals</h2>
+
+    <div class="form-header">Current Active Goal</div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+      <div>
+        <label class="text-xs muted mb-1 block">Target Created</label>
+        <input id="goal-target-created" type="number" min="0" />
+      </div>
+      <div>
+        <label class="text-xs muted mb-1 block">Target Approved</label>
+        <input id="goal-target-approved" type="number" min="0" />
+      </div>
+      <div>
+        <label class="text-xs muted mb-1 block">Current Approved</label>
+        <input id="goal-current-approved" type="number" min="0" />
+      </div>
+      <div>
+        <label class="text-xs muted mb-1 block">Total Developed</label>
+        <input id="goal-total-developed" type="number" min="0" />
+      </div>
+      <div>
+        <label class="text-xs muted mb-1 block">Deadline</label>
+        <input id="goal-deadline" type="date" />
+      </div>
+      <div class="flex items-end">
+        <button class="btn btn-success w-full" onclick="saveGoal()">Save Goal</button>
+      </div>
+    </div>
+
+    <div id="goal-status" class="muted text-sm mt-2"></div>
+  </section>
+
+  <!-- ==================== WEEKS ==================== -->
+  <section id="tab-weeks" class="card hidden">
+    <h2 class="text-xl font-bold mb-4">Tracking Weeks</h2>
+
+    <div class="form-header">Add New Week</div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+      <div>
+        <label class="text-xs muted mb-1 block">Week From</label>
+        <input id="week-from" type="date" />
+      </div>
+      <div>
+        <label class="text-xs muted mb-1 block">Week To</label>
+        <input id="week-to" type="date" />
+      </div>
+    </div>
+    <div class="mt-3 mb-6">
+      <button class="btn btn-success" onclick="addWeek()">Add Week</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="text-slate-400 text-xs uppercase tracking-wide border-b border-slate-700">
+            <th class="py-2">ID</th>
+            <th class="py-2">From</th>
+            <th class="py-2">To</th>
+          </tr>
+        </thead>
+        <tbody id="weeks-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+</div><!-- end admin-content -->
+
+<script src="./script.js"></script>
+<script>
+// ==================== AUTH ====================
+async function handleLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.classList.add('hidden');
+
+  if (!email || !password) {
+    errEl.textContent = 'Please enter email and password';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  document.getElementById('login-btn').textContent = 'Signing in...';
+
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    errEl.textContent = error.message;
+    errEl.classList.remove('hidden');
+    document.getElementById('login-btn').textContent = 'Sign In';
+    return;
+  }
+
+  showAdmin(data.user);
+}
+
+async function handleLogout() {
+  await db.auth.signOut();
+  document.getElementById('admin-content').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+}
+
+function showAdmin(user) {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('admin-content').classList.remove('hidden');
+  document.getElementById('user-email').textContent = user.email;
+  loadAll();
+}
+
+db.auth.onAuthStateChange((event, session) => {
+  if (session?.user) {
+    showAdmin(session.user);
+  }
+});
+
+// ==================== TAB SWITCHING ====================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('active');
+      b.style.background = '';
+      b.style.color = '';
+    });
+    btn.classList.add('active');
+
+    document.querySelectorAll('[id^="tab-"]').forEach(s => s.classList.add('hidden'));
+    document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+  });
+});
+
+// ==================== TOAST ====================
+function toast(msg, type = 'success') {
+  const div = document.createElement('div');
+  div.className = `toast toast-${type}`;
+  div.textContent = msg;
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 3000);
+}
+
+// ==================== LOAD ALL DATA ====================
+async function loadAll() {
+  await Promise.all([
+    loadMembers(),
+    loadWeeks(),
+    loadTouchpoints(),
+    loadGoal(),
+    loadScores()
+  ]);
+}
+
+// ==================== MEMBERS ====================
+async function loadMembers() {
+  const members = await fetchAllMembers();
+  const tbody = document.getElementById('members-body');
+  tbody.innerHTML = '';
+
+  members.forEach(m => {
+    const tr = document.createElement('tr');
+    tr.className = 'border-b border-slate-800';
+    tr.innerHTML = `
+      <td class="py-3 text-sm">${m.id}</td>
+      <td class="py-3 text-sm font-medium">${m.name}</td>
+      <td class="py-3 text-sm muted hidden sm:table-cell">${m.email || '—'}</td>
+      <td class="py-3 text-right">
+        <div class="flex gap-1 justify-end">
+          <button class="btn btn-warning btn-sm" onclick="editMember(${m.id}, '${(m.name || '').replace(/'/g, "\\'")}', '${(m.email || '').replace(/'/g, "\\'")}')">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteMember(${m.id})">Remove</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  populateMemberDropdowns(members);
+}
+
+function populateMemberDropdowns(members) {
+  ['score-member', 'tp-assigned'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">Select member...</option>';
+    members.forEach(m => {
+      sel.innerHTML += `<option value="${m.id}">${m.name}</option>`;
+    });
+  });
+}
+
+function editMember(id, name, email) {
+  document.getElementById('member-edit-id').value = id;
+  document.getElementById('member-name').value = name;
+  document.getElementById('member-email').value = email;
+  document.getElementById('member-save-btn').textContent = 'Update Member';
+  document.getElementById('member-cancel-btn').classList.remove('hidden');
+  document.getElementById('member-editing').classList.add('active');
+  document.getElementById('member-form-title').textContent = 'Edit Member';
+  document.getElementById('member-name').focus();
+}
+
+function cancelEditMember() {
+  document.getElementById('member-edit-id').value = '';
+  document.getElementById('member-name').value = '';
+  document.getElementById('member-email').value = '';
+  document.getElementById('member-save-btn').textContent = 'Add Member';
+  document.getElementById('member-cancel-btn').classList.add('hidden');
+  document.getElementById('member-editing').classList.remove('active');
+  document.getElementById('member-form-title').textContent = 'Add New Member';
+}
+
+async function saveMember() {
+  const editId = document.getElementById('member-edit-id').value;
+  const name = document.getElementById('member-name').value.trim();
+  const email = document.getElementById('member-email').value.trim();
+  if (!name) return toast('Name is required', 'error');
+
+  let error;
+  if (editId) {
+    ({ error } = await db.from('team_members').update({ name, email: email || null }).eq('id', Number(editId)));
+  } else {
+    ({ error } = await db.from('team_members').insert({ name, email: email || null }));
+  }
+
+  if (error) return toast(error.message, 'error');
+
+  cancelEditMember();
+  toast(editId ? 'Member updated' : 'Member added');
+  loadMembers();
+}
+
+async function deleteMember(id) {
+  if (!confirm('Remove this member?')) return;
+  const { error } = await db.from('team_members').update({ is_active: false }).eq('id', id);
+  if (error) return toast(error.message, 'error');
+  toast('Member removed');
+  loadMembers();
+}
+
+// ==================== WEEKS ====================
+async function loadWeeks() {
+  const weeks = await fetchAllWeeks();
+  const tbody = document.getElementById('weeks-body');
+  tbody.innerHTML = '';
+
+  weeks.forEach(w => {
+    const tr = document.createElement('tr');
+    tr.className = 'border-b border-slate-800';
+    tr.innerHTML = `
+      <td class="py-3 text-sm">${w.id}</td>
+      <td class="py-3 text-sm">${w.week_from}</td>
+      <td class="py-3 text-sm">${w.week_to}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const sel = document.getElementById('score-week');
+  sel.innerHTML = '<option value="">Select week...</option>';
+  weeks.forEach(w => {
+    sel.innerHTML += `<option value="${w.id}">${w.week_from} – ${w.week_to}</option>`;
+  });
+}
+
+async function addWeek() {
+  const from = document.getElementById('week-from').value;
+  const to = document.getElementById('week-to').value;
+  if (!from || !to) return toast('Both dates are required', 'error');
+
+  const { error } = await db.from('weeks').insert({ week_from: from, week_to: to });
+  if (error) return toast(error.message, 'error');
+
+  document.getElementById('week-from').value = '';
+  document.getElementById('week-to').value = '';
+  toast('Week added');
+  loadWeeks();
+}
+
+// ==================== SCORES ====================
+async function loadScores() {
+  const { data, error } = await db
+    .from('weekly_scripts')
+    .select('*, team_members(name), weeks(week_from, week_to)')
+    .order('week_id', { ascending: false });
+
+  if (error) return console.error(error);
+  const tbody = document.getElementById('scores-body');
+  tbody.innerHTML = '';
+
+  (data || []).forEach(s => {
+    const tr = document.createElement('tr');
+    tr.className = 'border-b border-slate-800';
+    tr.innerHTML = `
+      <td class="py-3 text-sm">${s.weeks?.week_from || '—'} – ${s.weeks?.week_to || '—'}</td>
+      <td class="py-3 text-sm font-medium">${s.team_members?.name || '—'}</td>
+      <td class="py-3 text-right">${s.scripts_created}</td>
+      <td class="py-3 text-right">${s.scripts_approved}</td>
+      <td class="py-3 text-right">
+        <div class="flex gap-1 justify-end">
+          <button class="btn btn-warning btn-sm" onclick="editScore(${s.id}, ${s.week_id}, ${s.member_id}, ${s.scripts_created}, ${s.scripts_approved})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteScore(${s.id})">Delete</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function editScore(id, weekId, memberId, created, approved) {
+  document.getElementById('score-edit-id').value = id;
+  document.getElementById('score-week').value = weekId;
+  document.getElementById('score-member').value = memberId;
+  document.getElementById('score-created').value = created;
+  document.getElementById('score-approved').value = approved;
+  document.getElementById('score-save-btn').textContent = 'Update Score';
+  document.getElementById('score-cancel-btn').classList.remove('hidden');
+  document.getElementById('score-editing').classList.add('active');
+  document.getElementById('score-form-title').textContent = 'Edit Score';
+  document.getElementById('score-created').focus();
+}
+
+function cancelEditScore() {
+  document.getElementById('score-edit-id').value = '';
+  document.getElementById('score-week').value = '';
+  document.getElementById('score-member').value = '';
+  document.getElementById('score-created').value = '';
+  document.getElementById('score-approved').value = '';
+  document.getElementById('score-save-btn').textContent = 'Save Score';
+  document.getElementById('score-cancel-btn').classList.add('hidden');
+  document.getElementById('score-editing').classList.remove('active');
+  document.getElementById('score-form-title').textContent = 'Add / Update Score';
+}
+
+async function upsertScore() {
+  const editId = document.getElementById('score-edit-id').value;
+  const week_id = Number(document.getElementById('score-week').value);
+  const member_id = Number(document.getElementById('score-member').value);
+  const scripts_created = Number(document.getElementById('score-created').value) || 0;
+  const scripts_approved = Number(document.getElementById('score-approved').value) || 0;
+
+  if (!week_id || !member_id) return toast('Select week and member', 'error');
+
+  let error;
+  if (editId) {
+    ({ error } = await db.from('weekly_scripts')
+      .update({ member_id, week_id, scripts_created, scripts_approved })
+      .eq('id', Number(editId)));
+  } else {
+    ({ error } = await db.from('weekly_scripts')
+      .upsert(
+        { member_id, week_id, scripts_created, scripts_approved },
+        { onConflict: 'member_id,week_id' }
+      ));
+  }
+
+  if (error) return toast(error.message, 'error');
+
+  cancelEditScore();
+  toast(editId ? 'Score updated' : 'Score saved');
+  loadScores();
+}
+
+async function deleteScore(id) {
+  if (!confirm('Delete this score entry?')) return;
+  const { error } = await db.from('weekly_scripts').delete().eq('id', id);
+  if (error) return toast(error.message, 'error');
+  toast('Score deleted');
+  loadScores();
+}
+
+// ==================== TOUCHPOINTS ====================
+async function loadTouchpoints() {
+  const data = await fetchTouchpoints();
+  const tbody = document.getElementById('touchpoints-body');
+  tbody.innerHTML = '';
+
+  data.forEach(t => {
+    const tr = document.createElement('tr');
+    tr.className = 'border-b border-slate-800';
+    tr.innerHTML = `
+      <td class="py-3 text-sm font-medium">${t.name}</td>
+      <td class="py-3 text-sm">${t.team_members?.name || '—'}</td>
+      <td class="py-3 text-right">${t.finished}</td>
+      <td class="py-3 text-right">
+        <button class="btn btn-warning btn-sm" onclick="editTouchpoint('${t.name}', ${t.assigned_to || 'null'}, ${t.finished})">Edit</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function editTouchpoint(name, assignedTo, finished) {
+  document.getElementById('tp-name').value = name;
+  document.getElementById('tp-assigned').value = assignedTo || '';
+  document.getElementById('tp-finished').value = finished;
+  document.getElementById('tp-save-btn').textContent = 'Update Touchpoint';
+  document.getElementById('tp-cancel-btn').classList.remove('hidden');
+  document.getElementById('tp-editing').classList.add('active');
+  document.getElementById('tp-form-title').textContent = 'Edit Touchpoint';
+  document.getElementById('tp-finished').focus();
+}
+
+function cancelEditTouchpoint() {
+  document.getElementById('tp-name').value = '';
+  document.getElementById('tp-assigned').value = '';
+  document.getElementById('tp-finished').value = '';
+  document.getElementById('tp-save-btn').textContent = 'Save Touchpoint';
+  document.getElementById('tp-cancel-btn').classList.add('hidden');
+  document.getElementById('tp-editing').classList.remove('active');
+  document.getElementById('tp-form-title').textContent = 'Add / Edit Touchpoint';
+}
+
+async function upsertTouchpoint() {
+  const name = document.getElementById('tp-name').value.trim().toLowerCase();
+  const assigned_to = Number(document.getElementById('tp-assigned').value) || null;
+  const finished = Number(document.getElementById('tp-finished').value) || 0;
+
+  if (!name) return toast('Touchpoint name is required', 'error');
+
+  const { error } = await db
+    .from('touchpoints')
+    .upsert(
+      { name, assigned_to, finished },
+      { onConflict: 'name' }
+    );
+
+  if (error) return toast(error.message, 'error');
+
+  cancelEditTouchpoint();
+  toast('Touchpoint saved');
+  loadTouchpoints();
+}
+
+// ==================== GOALS ====================
+async function loadGoal() {
+  const goal = await fetchActiveGoal();
+  if (!goal) return;
+
+  document.getElementById('goal-target-created').value = goal.target_created;
+  document.getElementById('goal-target-approved').value = goal.target_approved;
+  document.getElementById('goal-current-approved').value = goal.current_approved;
+  document.getElementById('goal-total-developed').value = goal.total_developed;
+  document.getElementById('goal-deadline').value = goal.deadline;
+  document.getElementById('goal-status').textContent =
+    `Active goal ID: ${goal.id} · Last updated: ${timeAgo(goal.updated_at)}`;
+}
+
+async function saveGoal() {
+  const goal = await fetchActiveGoal();
+  const payload = {
+    target_created: Number(document.getElementById('goal-target-created').value) || 0,
+    target_approved: Number(document.getElementById('goal-target-approved').value) || 0,
+    current_approved: Number(document.getElementById('goal-current-approved').value) || 0,
+    total_developed: Number(document.getElementById('goal-total-developed').value) || 0,
+    deadline: document.getElementById('goal-deadline').value,
+    is_active: true
+  };
+
+  let error;
+  if (goal) {
+    ({ error } = await db.from('goals').update(payload).eq('id', goal.id));
+  } else {
+    ({ error } = await db.from('goals').insert(payload));
+  }
+
+  if (error) return toast(error.message, 'error');
+  toast('Goal saved');
+  loadGoal();
+}
+
+// ==================== INIT ====================
+// loadAll() is called by showAdmin() after successful login
+</script>
+
+</body>
+</html>
